@@ -9,6 +9,7 @@ pub struct PlayerState {
     pub current_position: usize,
     pub jail: Option<usize>,
     pub balance: i32,
+    pub active: bool,
 }
 
 #[allow(dead_code)]
@@ -20,6 +21,72 @@ pub struct Player {
 
 impl Player {
     #[allow(dead_code)]
+    pub fn bankrupt(&self) {
+        let mut m = self.state.borrow_mut();
+        m.active = false;
+        m.balance = 0;
+        m.jail = None;
+    }
+
+    #[allow(dead_code)]
+    pub fn is_active(&self) -> bool {
+        let s = self.state.borrow();
+        s.active
+    }
+
+    #[allow(dead_code)]
+    pub fn current_balance(&self) -> i32 {
+        let s = self.state.borrow();
+        s.balance
+    }
+
+    #[allow(dead_code)]
+    fn can_afford(&self, charge: i32) -> bool {
+        let b = self.state.borrow().balance;
+        b - charge > 0
+    }
+
+    #[allow(dead_code)]
+    pub fn pay(&self, charge: i32) -> i32 {
+        let mut m = self.state.borrow_mut();
+        if self.can_afford(charge) {
+            m.balance -= charge;
+            0
+        } else {
+            m.active = false;
+            m.balance
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn go_to_jail(&self) {
+        let mut m = self.state.borrow_mut();
+        m.jail = Some(0);
+    }
+
+    #[allow(dead_code)]
+    pub fn in_jail(&self) -> bool {
+        self.state.borrow().jail.is_some()
+    }
+
+    #[allow(dead_code)]
+    pub fn update_jail(&self, is_double: bool, bail: i32) {
+        let mut m = self.state.borrow_mut();
+        m.jail = m.jail.map(|v| v + 1);
+
+        if is_double {
+            m.jail = None;
+        } else {
+            match m.jail {
+                Some(1) | Some(2) => (),
+                _ => {
+                    self.pay(bail);
+                }
+            }
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn create_players(n_players: usize) -> RingBuffer<Player> {
         let mut players = RingBuffer::with_capacity(n_players);
         for identity in 1..=n_players {
@@ -30,6 +97,7 @@ impl Player {
                     current_position: 0,
                     jail: None,
                     balance: 1500,
+                    active: true,
                 }),
             });
         }

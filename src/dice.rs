@@ -1,10 +1,48 @@
+use std::ops::Add;
+
 use rand::distributions::{Distribution, Uniform};
 use rand::prelude::ThreadRng;
 
+pub struct RollState {
+    pub value: usize,
+    pub double: bool,
+}
+
+impl Default for RollState {
+    fn default() -> Self {
+        RollState {
+            value: 0,
+            double: true,
+        }
+    }
+}
+
+impl Add for RollState {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            value: self.value + other.value,
+            double: self.value.eq(&other.value),
+        }
+    }
+}
+
 #[allow(dead_code)]
-fn roll_dice(rng: &mut ThreadRng, n_dice: usize) -> u8 {
-    let distribution: Uniform<u8> = Uniform::new_inclusive(1, 6);
-    (0..n_dice).map(|_| distribution.sample(rng)).sum()
+fn roll_dice(rng: &mut ThreadRng) -> RollState {
+    let distribution = Uniform::new_inclusive(1, 6);
+    (0..2).fold(RollState::default(), |a, r| {
+        let new = RollState {
+            value: distribution.sample(rng),
+            double: true,
+        };
+
+        if r == 0 {
+            new
+        } else {
+            new.add(a)
+        }
+    })
 }
 
 #[cfg(test)]
@@ -16,8 +54,7 @@ mod test {
         let mut r = rand::thread_rng();
 
         for _ in 0..=1000 {
-            println!("{}", roll_dice(&mut r, 2));
-            assert!(roll_dice(&mut r, 2) <= 12);
+            assert!(roll_dice(&mut r).value <= 12);
         }
     }
 }
