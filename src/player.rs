@@ -21,47 +21,57 @@ pub struct Player {
 
 impl Player {
     #[allow(dead_code)]
-    pub fn bankrupt(&self) {
-        let mut m = self.state.borrow_mut();
-        m.active = false;
-        m.balance = 0;
-        m.jail = None;
-    }
-
-    #[allow(dead_code)]
-    pub fn is_active(&self) -> bool {
-        let s = self.state.borrow();
-        s.active
-    }
-
-    #[allow(dead_code)]
-    pub fn current_balance(&self) -> i32 {
-        let s = self.state.borrow();
-        s.balance
-    }
-
-    #[allow(dead_code)]
-    fn can_afford(&self, charge: i32) -> bool {
-        let b = self.state.borrow().balance;
-        b - charge > 0
-    }
-
-    #[allow(dead_code)]
-    pub fn pay(&self, charge: i32) -> i32 {
-        let mut m = self.state.borrow_mut();
-        if self.can_afford(charge) {
-            m.balance -= charge;
-            0
-        } else {
-            m.active = false;
-            m.balance
+    fn new(id: usize) -> Self {
+        Self {
+            id,
+            token: Token::value_to_enum(id),
+            state: RefCell::new(PlayerState {
+                current_position: 0,
+                jail: None,
+                balance: 1500,
+                active: true,
+            }),
         }
     }
 
     #[allow(dead_code)]
-    pub fn go_to_jail(&self) {
-        let mut m = self.state.borrow_mut();
-        m.jail = Some(0);
+    pub fn is_active(&self) -> bool {
+        self.state.borrow().active
+    }
+
+    #[allow(dead_code)]
+    pub fn current_balance(&self) -> i32 {
+        self.state.borrow().balance
+    }
+
+    #[allow(dead_code)]
+    fn can_afford(&self, charge: i32) -> bool {
+        self.state.borrow().balance - charge > 0
+    }
+
+    #[allow(dead_code)]
+    pub fn pay(&self, charge: i32) {
+        let mut s = self.state.borrow_mut();
+        if s.balance - charge > 0 {
+            s.balance -= charge;
+        } else {
+            s.active = false;
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn go_to_jail(&self) -> usize {
+        let mut s = self.state.borrow_mut();
+        let mut days = 1;
+        s.jail = match s.jail {
+            Some(v) => {
+                days = v + 1;
+                Some(days)
+            }
+            None => Some(0),
+        };
+
+        days
     }
 
     #[allow(dead_code)]
@@ -70,36 +80,28 @@ impl Player {
     }
 
     #[allow(dead_code)]
+    pub fn get_out_of_jail(&self) {
+        let mut s = self.state.borrow_mut();
+        s.jail = None;
+    }
+
+    #[allow(dead_code)]
     pub fn update_jail(&self, is_double: bool, bail: i32) {
-        let mut m = self.state.borrow_mut();
-        m.jail = m.jail.map(|v| v + 1);
+        let count = self.go_to_jail();
 
         if is_double {
-            m.jail = None;
-        } else {
-            match m.jail {
-                Some(1) | Some(2) => (),
-                _ => {
-                    self.pay(bail);
-                }
-            }
+            self.get_out_of_jail();
+        } else if count == 3 {
+            self.pay(bail);
+            self.get_out_of_jail();
         }
     }
 
     #[allow(dead_code)]
-    pub fn create_players(n_players: usize) -> RingBuffer<Player> {
+    pub fn create_players(n_players: usize) -> RingBuffer<Self> {
         let mut players = RingBuffer::with_capacity(n_players);
         for identity in 1..=n_players {
-            players.push(Player {
-                id: identity,
-                token: Token::value_to_enum(identity),
-                state: RefCell::new(PlayerState {
-                    current_position: 0,
-                    jail: None,
-                    balance: 1500,
-                    active: true,
-                }),
-            });
+            players.push(Self::new(identity));
         }
 
         players
@@ -128,5 +130,69 @@ mod test {
         let last_player = players.get_absolute(9).unwrap();
 
         assert!(last_player.id == 10 && last_player.token == Token::Boot);
+    }
+
+    #[test]
+    fn is_player_in_jail() {
+        let gamer_one = Player::new(1);
+        assert!(gamer_one.is_active());
+        assert!(!gamer_one.in_jail());
+        gamer_one.go_to_jail();
+        assert!(gamer_one.in_jail());
+    }
+
+    #[test]
+    fn purchasing_a_property() {
+        let gamer_two = Player::new(2);
+        assert!(gamer_two.is_active());
+        assert!(gamer_two.can_afford(100));
+
+        gamer_two.pay(1000);
+        assert!(gamer_two.is_active());
+        assert_eq!(gamer_two.current_balance(), 500);
+
+        gamer_two.pay(1000);
+        println!("{}", gamer_two.current_balance());
+        assert!(!gamer_two.is_active());
+    }
+
+    #[test]
+    fn jail_sequence_with_double() {
+        let gamer_three = Player::new(2);
+        let balance = gamer_three.current_balance();
+        assert!(!gamer_three.in_jail());
+
+        gamer_three.go_to_jail();
+        assert!(gamer_three.in_jail());
+
+        gamer_three.update_jail(false, 30); // #1
+        assert!(gamer_three.in_jail());
+
+        gamer_three.update_jail(false, 30); // #2
+        assert!(gamer_three.in_jail());
+
+        gamer_three.update_jail(true, 30); // #3
+        assert!(!gamer_three.in_jail());
+        assert_eq!(gamer_three.current_balance(), balance);
+    }
+
+    #[test]
+    fn jail_sequence_with_no_double() {
+        let gamer_three = Player::new(2);
+        let balance = gamer_three.current_balance();
+        assert!(!gamer_three.in_jail());
+
+        gamer_three.go_to_jail();
+        assert!(gamer_three.in_jail());
+
+        gamer_three.update_jail(false, 30); // #1
+        assert!(gamer_three.in_jail());
+
+        gamer_three.update_jail(false, 30); // #2
+        assert!(gamer_three.in_jail());
+
+        gamer_three.update_jail(false, 30); // #3
+        assert!(!gamer_three.in_jail());
+        assert_eq!(gamer_three.current_balance(), balance - 30);
     }
 }
