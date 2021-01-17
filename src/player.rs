@@ -4,24 +4,28 @@ use ring_buffer::RingBuffer;
 
 use crate::token::Token;
 
+pub type PlayerId = usize;
+
 #[allow(dead_code)]
 pub struct PlayerState {
     pub current_position: usize,
     pub jail: Option<usize>,
-    pub balance: i32,
+    pub balance: usize,
     pub active: bool,
+    pub go_count: usize,
+    pub jail_count: usize,
 }
 
 #[allow(dead_code)]
 pub struct Player {
-    pub id: usize,
+    pub id: PlayerId,
     pub token: Token,
     pub state: RefCell<PlayerState>,
 }
 
 impl Player {
     #[allow(dead_code)]
-    fn new(id: usize) -> Self {
+    pub fn new(id: usize) -> Self {
         Self {
             id,
             token: Token::value_to_enum(id),
@@ -30,6 +34,8 @@ impl Player {
                 jail: None,
                 balance: 1500,
                 active: true,
+                go_count: 0,
+                jail_count: 0,
             }),
         }
     }
@@ -40,19 +46,19 @@ impl Player {
     }
 
     #[allow(dead_code)]
-    pub fn current_balance(&self) -> i32 {
+    pub fn current_balance(&self) -> usize {
         self.state.borrow().balance
     }
 
     #[allow(dead_code)]
-    fn can_afford(&self, charge: i32) -> bool {
+    fn can_afford(&self, charge: usize) -> bool {
         self.state.borrow().balance - charge > 0
     }
 
     #[allow(dead_code)]
-    pub fn pay(&self, charge: i32) {
+    pub fn pay(&self, charge: usize) {
         let mut s = self.state.borrow_mut();
-        if s.balance - charge > 0 {
+        if s.balance as i32 - charge as i32 > 0 {
             s.balance -= charge;
         } else {
             s.active = false;
@@ -68,7 +74,10 @@ impl Player {
                 days = v + 1;
                 Some(days)
             }
-            None => Some(0),
+            None => {
+                s.jail_count += 1;
+                Some(0)
+            }
         };
 
         days
@@ -86,7 +95,7 @@ impl Player {
     }
 
     #[allow(dead_code)]
-    pub fn update_jail(&self, is_double: bool, bail: i32) {
+    pub fn update_jail(&self, is_double: bool, bail: usize) {
         let count = self.go_to_jail();
 
         if is_double {
@@ -105,6 +114,13 @@ impl Player {
         }
 
         players
+    }
+
+    #[allow(dead_code)]
+    pub fn passing_go(&self) {
+        let mut s = self.state.borrow_mut();
+        s.go_count += 1;
+        s.balance += 200;
     }
 }
 
@@ -137,6 +153,7 @@ mod test {
         let gamer_one = Player::new(1);
         assert!(gamer_one.is_active());
         assert!(!gamer_one.in_jail());
+
         gamer_one.go_to_jail();
         assert!(gamer_one.in_jail());
     }
@@ -152,7 +169,6 @@ mod test {
         assert_eq!(gamer_two.current_balance(), 500);
 
         gamer_two.pay(1000);
-        println!("{}", gamer_two.current_balance());
         assert!(!gamer_two.is_active());
     }
 
