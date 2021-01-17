@@ -14,6 +14,8 @@ pub struct PlayerState {
     pub active: bool,
     pub go_count: usize,
     pub jail_count: usize,
+    pub house_count: usize,
+    pub hotel_count: usize,
 }
 
 #[allow(dead_code)]
@@ -36,11 +38,27 @@ impl Player {
                 active: true,
                 go_count: 0,
                 jail_count: 0,
+                house_count: 0,
+                hotel_count: 0,
             }),
         }
     }
 
-    #[allow(dead_code)]
+    pub fn add_house(&self) {
+        let mut s = self.state.borrow_mut();
+        s.house_count += 1;
+    }
+
+    pub fn add_hotel(&self) {
+        let mut s = self.state.borrow_mut();
+        s.hotel_count += 1;
+    }
+
+    pub fn count_properties(&self) -> (usize, usize) {
+        let s = self.state.borrow();
+        (s.house_count, s.hotel_count)
+    }
+
     pub fn is_active(&self) -> bool {
         self.state.borrow().active
     }
@@ -50,18 +68,15 @@ impl Player {
         self.state.borrow().balance
     }
 
-    #[allow(dead_code)]
     pub fn can_afford(&self, charge: usize) -> bool {
         self.state.borrow().balance - charge > 0
     }
 
-    #[allow(dead_code)]
     pub fn deposit(&self, value: usize) {
         let mut s = self.state.borrow_mut();
         s.balance += value;
     }
 
-    #[allow(dead_code)]
     pub fn pay(&self, charge: usize) {
         let mut s = self.state.borrow_mut();
         if s.balance as i32 - charge as i32 > 0 {

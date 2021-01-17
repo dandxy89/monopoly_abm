@@ -1,10 +1,11 @@
-use std::{cell::RefCell, collections::HashMap};
+use rand::distributions::{Distribution, Uniform};
+use std::{cell::RefCell, collections::HashMap, unimplemented};
 
 use rand::rngs::ThreadRng;
 
-use crate::locations::BoardLocationName;
 use crate::payment::Payment;
 use crate::player::{Player, PlayerId};
+use crate::{locations::BoardLocationName, player};
 
 pub type BoardPosition = usize;
 pub type Movement = usize;
@@ -154,12 +155,14 @@ impl BoardSquare {
         }
     }
 
-    fn upgrade(&self) {
+    fn upgrade(&self, player: &Player) {
         let mut s = self.state.borrow_mut();
         if s.house_count < 4 {
             s.house_count += 1;
+            player.add_house();
         } else if s.hotel_count == 0 {
             s.hotel_count += 1;
+            player.add_hotel();
         }
     }
 
@@ -168,25 +171,110 @@ impl BoardSquare {
         player.pay(self.upgrade_cost());
 
         if player.is_active() {
-            self.upgrade();
+            self.upgrade(player);
         }
     }
 
-    // Community Chest
-    // - Advance to Go
-    // - Banking error collect 200
-    // - Doctors Fees pay 50
-    // - Sale from Stock collect 50
-    // - Get out of Jail free
-    // - Holiday Xmas func matures collect 100
-    // - Income Tax refund collect 20
-    // - Its your birthday collect 10 from each player
-    // - Life Insurance matures collect 100
-    // - Hospital fees pay 50
-    // - School fees pay 50
-    // - Street repairs 40 per house and 115 per hotel
-    // - Second play in a Beauty competition collect 20
-    // - You inheritance comes through collect 100
+    /// Community Chest
+    fn community_chest_space(
+        &self,
+        player: &Player,
+        rng: &mut ThreadRng,
+    ) -> (Movement, Option<Payment>, FreeParking) {
+        let distribution = Uniform::new_inclusive(1, 14);
+        match distribution.sample(rng) {
+            1 => {
+                log::info!("Community Chest: Advance to Go [Player={}]", player.id);
+                (0, None, 0)
+            }
+            2 => {
+                log::info!(
+                    "Community Chest: Banking error collect 200 [Player={}]",
+                    player.id
+                );
+                player.deposit(200);
+                (0, None, 0)
+            }
+            3 => {
+                log::info!(
+                    "Community Chest: Doctors Fees pay 50 [Player={}]",
+                    player.id
+                );
+                player.pay(50);
+                (0, None, 50)
+            }
+            4 => {
+                log::info!(
+                    "Community Chest: Sale from Stock collect 50 [Player={}]",
+                    player.id
+                );
+                player.deposit(50);
+                (0, None, 0)
+            }
+            // 5
+            // TODO Get out of Jail free
+            6 => {
+                log::info!(
+                    "Community Chest: Holiday Xmas func matures collect 100 [Player={}]",
+                    player.id
+                );
+                player.deposit(100);
+                (0, None, 0)
+            }
+            7 => {
+                log::info!(
+                    "Community Chest: Income Tax refund collect 20 [Player={}]",
+                    player.id
+                );
+                player.deposit(20);
+                (0, None, 0)
+            }
+            // 8
+            // TODO Its your birthday collect 10 from each player
+            9 => {
+                log::info!(
+                    "Community Chest: Life Insurance matures collect 100 [Player={}]",
+                    player.id
+                );
+                player.deposit(100);
+                (0, None, 0)
+            }
+            10 => {
+                log::info!(
+                    "Community Chest: Hospital fees pay 50 [Player={}]",
+                    player.id
+                );
+                player.pay(50);
+                (0, None, 50)
+            }
+            11 => {
+                log::info!(
+                    "Community Chest: Street repairs 40 per house and 115 per hotel [Player={}]",
+                    player.id
+                );
+                let (houses, hotels) = player.count_properties();
+                let amount = 40 * houses + 115 * hotels;
+                player.pay(amount); // TODO FIX
+                (0, None, amount)
+            }
+            12 => {
+                log::info!(
+                    "Community Chest: Second play in a Beauty competition collect 20 [Player={}]",
+                    player.id
+                );
+                player.deposit(20);
+                (0, None, 0)
+            }
+            _ => {
+                log::info!(
+                    "Community Chest: Your inheritance comes through collect 100 [Player={}]",
+                    player.id
+                );
+                player.deposit(100);
+                (0, None, 0)
+            }
+        }
+    }
 
     // Chance
     // - Advance to Go
@@ -205,13 +293,20 @@ impl BoardSquare {
     // - You have won a crossword competition. Collect £100
     // - Bank pays you dividend of £50
     // - Get out of jail free. This card may be kept until needed or sold
+    fn chance_space(
+        &self,
+        _player: &Player,
+        _rng: &mut ThreadRng,
+    ) -> (Movement, Option<Payment>, FreeParking) {
+        unimplemented!()
+    }
 
     #[allow(dead_code)]
     pub fn take_step(
         &self,
         new_position: BoardSquare,
         player: &Player,
-        _rng: &mut ThreadRng,
+        rng: &mut ThreadRng,
     ) -> (Movement, Option<Payment>, FreeParking) {
         match new_position.square {
             BoardLocationName::Go => {
@@ -226,16 +321,11 @@ impl BoardSquare {
                 player.pay(75);
                 (0, None, 0)
             }
-            BoardLocationName::Chance1
-            | BoardLocationName::Chance2
-            | BoardLocationName::Chance3 => {
-                // RANDOMLY SELECT CARD
-                unimplemented!()
-            }
-            BoardLocationName::CommunityChest1 | BoardLocationName::CommunityChest2 => {
-                // RANDOMLY SELECT CARD
-                unimplemented!()
-            }
+            BoardLocationName::Chance1 => self.chance_space(player, rng),
+            BoardLocationName::Chance2 => self.chance_space(player, rng),
+            BoardLocationName::Chance3 => self.chance_space(player, rng),
+            BoardLocationName::CommunityChest1 => self.community_chest_space(player, rng),
+            BoardLocationName::CommunityChest2 => self.community_chest_space(player, rng),
             BoardLocationName::GoToJail => {
                 player.go_to_jail();
                 (9, None, 0)

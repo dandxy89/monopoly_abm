@@ -1,11 +1,13 @@
 [package]
 name = "monopoly_abm"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Dan Dixey <Dan.Dixey@woodmac.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+env_logger = "0.8"
+log = "0.4"
 rand = "0.8.2"
 ring_buffer = "0.1.3"
