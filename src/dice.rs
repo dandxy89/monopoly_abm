@@ -54,7 +54,8 @@ mod test {
         let mut r = rand::thread_rng();
 
         for _ in 0..=1000 {
-            assert!(roll_game_dice(&mut r).value <= 12);
+            let the_roll = roll_game_dice(&mut r);
+            assert!(the_roll.value <= 12 && the_roll.value > 1);
         }
     }
 }

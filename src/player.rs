@@ -16,6 +16,7 @@ pub struct PlayerState {
     pub jail_count: usize,
     pub house_count: usize,
     pub hotel_count: usize,
+    pub jail_card: bool,
 }
 
 #[allow(dead_code)]
@@ -40,8 +41,19 @@ impl Player {
                 jail_count: 0,
                 house_count: 0,
                 hotel_count: 0,
+                jail_card: false,
             }),
         }
+    }
+
+    pub fn jail_card(&self) {
+        let mut s = self.state.borrow_mut();
+        s.jail_card = true;
+    }
+
+    pub fn has_jail_card(&self) -> bool {
+        let s = self.state.borrow();
+        s.jail_card
     }
 
     pub fn add_house(&self) {
@@ -113,13 +125,14 @@ impl Player {
     pub fn get_out_of_jail(&self) {
         let mut s = self.state.borrow_mut();
         s.jail = None;
+        s.jail_card = false;
     }
 
     #[allow(dead_code)]
     pub fn update_jail(&self, is_double: bool, bail: usize) {
         let count = self.go_to_jail();
 
-        if is_double {
+        if is_double || self.has_jail_card() {
             self.get_out_of_jail();
         } else if count == 3 {
             self.pay(bail);

@@ -1,14 +1,14 @@
 use rand::distributions::{Distribution, Uniform};
-use std::{cell::RefCell, collections::HashMap, unimplemented};
+use std::{cell::RefCell, collections::HashMap};
 
 use rand::rngs::ThreadRng;
 
+use crate::locations::BoardLocationName;
 use crate::payment::Payment;
 use crate::player::{Player, PlayerId};
-use crate::{locations::BoardLocationName, player};
 
 pub type BoardPosition = usize;
-pub type Movement = usize;
+pub type MoveTo = usize;
 pub type FreeParking = usize;
 
 #[allow(dead_code)]
@@ -180,12 +180,12 @@ impl BoardSquare {
         &self,
         player: &Player,
         rng: &mut ThreadRng,
-    ) -> (Movement, Option<Payment>, FreeParking) {
+    ) -> (Option<MoveTo>, Option<Payment>, FreeParking) {
         let distribution = Uniform::new_inclusive(1, 14);
         match distribution.sample(rng) {
             1 => {
                 log::info!("Community Chest: Advance to Go [Player={}]", player.id);
-                (0, None, 0)
+                (Some(0), None, 0)
             }
             2 => {
                 log::info!(
@@ -193,7 +193,7 @@ impl BoardSquare {
                     player.id
                 );
                 player.deposit(200);
-                (0, None, 0)
+                (None, None, 0)
             }
             3 => {
                 log::info!(
@@ -201,7 +201,7 @@ impl BoardSquare {
                     player.id
                 );
                 player.pay(50);
-                (0, None, 50)
+                (None, None, 50)
             }
             4 => {
                 log::info!(
@@ -209,17 +209,23 @@ impl BoardSquare {
                     player.id
                 );
                 player.deposit(50);
-                (0, None, 0)
+                (None, None, 0)
             }
-            // 5
-            // TODO Get out of Jail free
+            5 => {
+                log::info!(
+                    "Community Chest: Get out of jail free card [Player={}]",
+                    player.id
+                );
+                player.jail_card();
+                (None, None, 0)
+            }
             6 => {
                 log::info!(
                     "Community Chest: Holiday Xmas func matures collect 100 [Player={}]",
                     player.id
                 );
                 player.deposit(100);
-                (0, None, 0)
+                (None, None, 0)
             }
             7 => {
                 log::info!(
@@ -227,7 +233,7 @@ impl BoardSquare {
                     player.id
                 );
                 player.deposit(20);
-                (0, None, 0)
+                (None, None, 0)
             }
             // 8
             // TODO Its your birthday collect 10 from each player
@@ -237,7 +243,7 @@ impl BoardSquare {
                     player.id
                 );
                 player.deposit(100);
-                (0, None, 0)
+                (None, None, 0)
             }
             10 => {
                 log::info!(
@@ -245,7 +251,7 @@ impl BoardSquare {
                     player.id
                 );
                 player.pay(50);
-                (0, None, 50)
+                (None, None, 50)
             }
             11 => {
                 log::info!(
@@ -254,8 +260,8 @@ impl BoardSquare {
                 );
                 let (houses, hotels) = player.count_properties();
                 let amount = 40 * houses + 115 * hotels;
-                player.pay(amount); // TODO FIX
-                (0, None, amount)
+                player.pay(amount);
+                (None, None, amount)
             }
             12 => {
                 log::info!(
@@ -263,7 +269,7 @@ impl BoardSquare {
                     player.id
                 );
                 player.deposit(20);
-                (0, None, 0)
+                (None, None, 0)
             }
             _ => {
                 log::info!(
@@ -271,34 +277,112 @@ impl BoardSquare {
                     player.id
                 );
                 player.deposit(100);
-                (0, None, 0)
+                (None, None, 0)
             }
         }
     }
 
     // Chance
-    // - Advance to Go
-    // - Go to jail
-    // - Advance to Pall Mall. If you pass "Go" collection £200
-    // - Take a trip to Marylebone Station and if you pass "Go" collect £200
-    // - Advance to Trafalgar Square. If you pass "Go" collect £200
-    // - Advance to Mayfair
-    // - Go back three spaces
-    // - Make general repairs on all of your houses. For each house pay £25. For each hotel pay £100
-    // - You are assessed for street repairs: £40 per house, £115 per hotel
-    // - Pay school fees of £150
-    // - "Drunk in charge" fine £20
-    // - Speeding fine £15
-    // - Your building loan matures. Receive £150
-    // - You have won a crossword competition. Collect £100
-    // - Bank pays you dividend of £50
-    // - Get out of jail free. This card may be kept until needed or sold
     fn chance_space(
         &self,
-        _player: &Player,
-        _rng: &mut ThreadRng,
-    ) -> (Movement, Option<Payment>, FreeParking) {
-        unimplemented!()
+        player: &Player,
+        rng: &mut ThreadRng,
+    ) -> (Option<MoveTo>, Option<Payment>, FreeParking) {
+        let distribution = Uniform::new_inclusive(1, 16);
+        match distribution.sample(rng) {
+            1 => {
+                log::info!("Chance: Advance to Go [Player={}]", player.id);
+                (Some(0), None, 0)
+            }
+            2 => {
+                log::info!("Chance: Go to jail [Player={}]", player.id);
+                player.go_to_jail();
+                (Some(9), None, 0)
+            }
+            3 => {
+                log::info!(
+                    "Chance: Advance to Pall Mall. If you pass Go collection 200 [Player={}]",
+                    player.id
+                );
+                (Some(10), None, 0)
+            }
+            4 => {
+                log::info!("Chance: Take a trip to Marylebone Station and if you pass Go collect 200 [Player={}]", player.id);
+                (Some(4), None, 0)
+            }
+            5 => {
+                log::info!(
+                    "Chance: Advance to Trafalgar Square. If you pass Go collect 200 [Player={}]",
+                    player.id
+                );
+                (Some(23), None, 0)
+            }
+            6 => {
+                log::info!("Chance: Advance to Mayfair [Player={}]", player.id);
+                (Some(38), None, 0)
+            }
+            7 => {
+                log::info!("Chance: Make general repairs on all of your houses. For each house pay £25. For each hotel pay £100 [Player={}]", player.id);
+                let (houses, hotels) = player.count_properties();
+                let amount = 25 * houses + 100 * hotels;
+                player.pay(amount);
+                (None, None, amount)
+            }
+            8 => {
+                log::info!(
+                    "Chance: Street repairs 40 per house and 115 per hotel [Player={}]",
+                    player.id
+                );
+                let (houses, hotels) = player.count_properties();
+                let amount = 40 * houses + 115 * hotels;
+                player.pay(amount);
+                (None, None, amount)
+            }
+            9 => {
+                log::info!("Chance: Pay school fees of 150 [Player={}]", player.id);
+                player.pay(150);
+                (None, None, 150)
+            }
+            10 => {
+                log::info!("Chance: Drunk in charge fine 20 [Player={}]", player.id);
+                player.pay(20);
+                (None, None, 20)
+            }
+            11 => {
+                log::info!("Chance: Speeding fine pay 16 [Player={}]", player.id);
+                player.pay(15);
+                (None, None, 15)
+            }
+            13 => {
+                log::info!(
+                    "Chance: Your building loan matures. Receive 150 [Player={}]",
+                    player.id
+                );
+                player.deposit(150);
+                (None, None, 0)
+            }
+            14 => {
+                log::info!(
+                    "Chance: You have won a crossword competition. Collect 100 [Player={}]",
+                    player.id
+                );
+                player.deposit(100);
+                (None, None, 0)
+            }
+            15 => {
+                log::info!("Chance: Get out of jail free card [Player={}]", player.id);
+                player.jail_card();
+                (None, None, 0)
+            }
+            _ => {
+                log::info!(
+                    "Chance: Bank pays you dividend of 50 [Player={}]",
+                    player.id
+                );
+                player.deposit(50);
+                (Some(0), None, 0)
+            }
+        }
     }
 
     #[allow(dead_code)]
@@ -307,19 +391,19 @@ impl BoardSquare {
         new_position: BoardSquare,
         player: &Player,
         rng: &mut ThreadRng,
-    ) -> (Movement, Option<Payment>, FreeParking) {
+    ) -> (Option<MoveTo>, Option<Payment>, FreeParking) {
         match new_position.square {
             BoardLocationName::Go => {
                 player.deposit(200);
-                (0, None, 0)
+                (None, None, 0)
             }
             BoardLocationName::IncomeTax => {
                 player.pay(200); // OR 10% of the value of the Assets
-                (0, None, 0)
+                (None, None, 0)
             }
             BoardLocationName::LuxuryTax => {
                 player.pay(75);
-                (0, None, 0)
+                (None, None, 0)
             }
             BoardLocationName::Chance1 => self.chance_space(player, rng),
             BoardLocationName::Chance2 => self.chance_space(player, rng),
@@ -328,26 +412,26 @@ impl BoardSquare {
             BoardLocationName::CommunityChest2 => self.community_chest_space(player, rng),
             BoardLocationName::GoToJail => {
                 player.go_to_jail();
-                (9, None, 0)
+                (Some(9), None, 0)
             }
-            BoardLocationName::Jail => (0, None, 0), // Just Visiting
+            BoardLocationName::Jail => (None, None, 0), // Just Visiting
             _ => {
                 // Not bought
                 if self.is_ownable() && player.can_afford(self.get_purchase_cost()) {
                     self.purchase_property(player);
-                    return (0, None, 0);
+                    return (None, None, 0);
                 }
 
                 // Owned by Player - maybe an upgrade?
                 let rent = self.rent_cost();
                 if self.is_owned_by_player(player) && player.can_afford(self.upgrade_cost()) {
                     self.purchase_upgrade(player);
-                    (0, None, 0)
+                    (None, None, 0)
                 } else if player.can_afford(rent) {
                     player.pay(rent);
 
                     (
-                        0,
+                        None,
                         Some(Payment {
                             to: self.owner_id().unwrap(),
                             amount: rent,
@@ -357,7 +441,7 @@ impl BoardSquare {
                     )
                 } else {
                     (
-                        0,
+                        None,
                         Some(Payment {
                             to: self.owner_id().unwrap(),
                             amount: rent,
