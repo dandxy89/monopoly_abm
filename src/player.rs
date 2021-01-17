@@ -51,8 +51,14 @@ impl Player {
     }
 
     #[allow(dead_code)]
-    fn can_afford(&self, charge: usize) -> bool {
+    pub fn can_afford(&self, charge: usize) -> bool {
         self.state.borrow().balance - charge > 0
+    }
+
+    #[allow(dead_code)]
+    pub fn deposit(&self, value: usize) {
+        let mut s = self.state.borrow_mut();
+        s.balance += value;
     }
 
     #[allow(dead_code)]
@@ -114,13 +120,6 @@ impl Player {
         }
 
         players
-    }
-
-    #[allow(dead_code)]
-    pub fn passing_go(&self) {
-        let mut s = self.state.borrow_mut();
-        s.go_count += 1;
-        s.balance += 200;
     }
 }
 

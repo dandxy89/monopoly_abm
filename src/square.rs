@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashMap};
 
 use crate::locations::BoardLocationName;
+use crate::payment::Payment;
 use crate::player::{Player, PlayerId};
 
 pub type BoardPosition = usize;
@@ -93,6 +94,20 @@ impl BoardSquare {
     }
 
     #[allow(dead_code)]
+    pub fn owner_id(&self) -> Option<usize> {
+        let s = self.state.borrow();
+        s.owner
+    }
+
+    #[allow(dead_code)]
+    pub fn is_owned_by_player(&self, player: &Player) -> bool {
+        match self.state.borrow().owner {
+            Some(id) => player.id == id,
+            None => false,
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn get_purchase_cost(&self) -> usize {
         self.cost
     }
@@ -153,7 +168,61 @@ impl BoardSquare {
         }
     }
 
-    // TODO Community Chest | Chance
+    #[allow(dead_code)]
+    pub fn take_step(&self, new_position: BoardSquare, player: &Player) -> Option<Payment> {
+        match new_position.square {
+            BoardLocationName::Go => {
+                player.deposit(200);
+                None
+            }
+            BoardLocationName::IncomeTax => {
+                player.pay(200); // OR 10% of the value of the Assets
+                None
+            }
+            BoardLocationName::LuxuryTax => {
+                player.pay(75);
+                None
+            }
+            BoardLocationName::Chance1
+            | BoardLocationName::Chance2
+            | BoardLocationName::Chance3 => unimplemented!(),
+            BoardLocationName::CommunityChest1 | BoardLocationName::CommunityChest2 => {
+                unimplemented!()
+            }
+            BoardLocationName::GoToJail => {
+                player.go_to_jail();
+                None
+            }
+            BoardLocationName::Jail => None, // Just Visiting
+            _ => {
+                // Not bought
+                if self.is_ownable() && player.can_afford(self.get_purchase_cost()) {
+                    self.purchase_property(player);
+                    return None;
+                }
+
+                // Owned by Player - maybe an upgrade?
+                let rent = self.rent_cost();
+                if self.is_owned_by_player(player) && player.can_afford(self.upgrade_cost()) {
+                    self.purchase_upgrade(player);
+                    None
+                } else if player.can_afford(rent) {
+                    player.pay(rent);
+                    Some(Payment {
+                        to: self.owner_id().unwrap(),
+                        amount: rent,
+                        terminal: false,
+                    })
+                } else {
+                    Some(Payment {
+                        to: self.owner_id().unwrap(),
+                        amount: rent,
+                        terminal: true,
+                    })
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
