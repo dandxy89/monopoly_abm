@@ -29,7 +29,7 @@ impl Add for RollState {
 }
 
 #[allow(dead_code)]
-fn roll_dice(rng: &mut ThreadRng) -> RollState {
+fn roll_game_dice(rng: &mut ThreadRng) -> RollState {
     let distribution = Uniform::new_inclusive(1, 6);
     (0..2).fold(RollState::default(), |a, r| {
         let new = RollState {
@@ -47,14 +47,14 @@ fn roll_dice(rng: &mut ThreadRng) -> RollState {
 
 #[cfg(test)]
 mod test {
-    use super::roll_dice;
+    use super::roll_game_dice;
 
     #[test]
     fn test_check_rolling_works() {
         let mut r = rand::thread_rng();
 
         for _ in 0..=1000 {
-            assert!(roll_dice(&mut r).value <= 12);
+            assert!(roll_game_dice(&mut r).value <= 12);
         }
     }
 }
