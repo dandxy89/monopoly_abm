@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use ring_buffer::RingBuffer;
 
-use crate::token::Token;
+use crate::{agent::Agent, monopoly::Monopoly, token::Token};
 
 pub type PlayerId = usize;
 
@@ -148,6 +148,14 @@ impl Player {
         }
 
         players
+    }
+}
+
+impl Agent for Player {
+    type SimState = Monopoly;
+
+    fn step(&mut self, _state: &Self::SimState) {
+        todo!()
     }
 }
 

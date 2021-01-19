@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use ring_buffer::RingBuffer;
 
-use crate::player::Player;
+use crate::{player::Player, state::State};
 
 #[allow(dead_code)]
 pub struct Monopoly {
@@ -20,4 +20,10 @@ impl Monopoly {
     //         // player_position
     //     }
     // }
+}
+
+impl State for Monopoly {
+    fn update(&mut self) {
+        todo!()
+    }
 }

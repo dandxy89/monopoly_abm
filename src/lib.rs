@@ -1,7 +1,10 @@
+mod agent;
 mod dice;
-mod game;
 mod locations;
+mod monopoly;
 mod payment;
 mod player;
+mod schedule;
 mod square;
+mod state;
 mod token;
