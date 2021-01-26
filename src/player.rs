@@ -1,7 +1,5 @@
 use std::cell::RefCell;
 
-use ring_buffer::RingBuffer;
-
 use crate::{agent::Agent, monopoly::MonopolyState, token::Token};
 
 pub type PlayerId = usize;
@@ -141,9 +139,9 @@ impl Player {
     }
 
     #[allow(dead_code)]
-    pub fn create_players(n_players: &usize) -> RingBuffer<Self> {
-        let mut players = RingBuffer::with_capacity(*n_players);
-        for identity in 1..=*n_players {
+    pub fn create_players(n_players: usize) -> Vec<Self> {
+        let mut players = Vec::with_capacity(n_players);
+        for identity in 1..=n_players {
             players.push(Self::new(identity));
         }
 
@@ -165,22 +163,10 @@ mod test {
 
     #[test]
     fn test_create_players() {
-        let players = Player::create_players(&3);
-        let player_one = players.get_absolute(0).unwrap();
-        let player_two = players.get_absolute(1).unwrap();
-        let player_three = players.get_absolute(2).unwrap();
+        let players = Player::create_players(3);
+        let player_one = &players[0];
 
         assert!(player_one.id == 1 && player_one.token == Token::Iron);
-        assert!(player_two.id == 2 && player_two.token == Token::Terrier);
-        assert!(player_three.id == 3 && player_three.token == Token::Horse);
-    }
-
-    #[test]
-    fn test_create_max() {
-        let players = Player::create_players(&10);
-        let last_player = players.get_absolute(9).unwrap();
-
-        assert!(last_player.id == 10 && last_player.token == Token::Boot);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use crate::player::PlayerId;
+use crate::player::{Player, PlayerId};
 use crate::state::State;
 use crate::{config::PropertyConfig, locations::BoardLocation};
 
@@ -16,7 +16,11 @@ pub struct MonopolyState {
 
 impl MonopolyState {
     #[allow(dead_code)]
-    pub fn new(n_players: usize, _property_config: Vec<PropertyConfig>) -> Self {
+    pub fn new(
+        n_players: usize,
+        _property_config: Vec<PropertyConfig>,
+        _players: Vec<&Player>,
+    ) -> Self {
         let mut positions = HashMap::new();
         for p_id in 1..=n_players {
             positions.insert(p_id, BoardLocation::Go);

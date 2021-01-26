@@ -99,7 +99,6 @@ dependencies = [
  "env_logger",
  "log",
  "rand",
- "ring_buffer",
  "serde",
 ]
 
@@ -190,12 +189,6 @@ name = "regex-syntax"
 version = "0.6.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
-
-[[package]]
-name = "ring_buffer"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9742af8ec347a7c8660d44aca42dbb7272a98b0570e69930a198dae1601c53b3"
 
 [[package]]
 name = "serde"
