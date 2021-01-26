@@ -1,10 +1,13 @@
 use std::cell::RefCell;
 
-use crate::{agent::Agent, monopoly::MonopolyState, token::Token};
+use crate::{agent::Agent, dice::roll_game_dice, monopoly::MonopolyState, token::Token};
 
 pub type PlayerId = usize;
 
+const JAIL_BAIL: usize = 50;
+
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct PlayerState {
     pub current_position: usize,
     pub jail: Option<usize>,
@@ -18,6 +21,7 @@ pub struct PlayerState {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct Player {
     pub id: PlayerId,
     pub token: Token,
@@ -25,8 +29,8 @@ pub struct Player {
 }
 
 impl Player {
-    #[allow(dead_code)]
-    pub fn new(id: usize) -> Self {
+    #[must_use]
+    pub const fn new(id: usize) -> Self {
         Self {
             id,
             token: Token::value_to_enum(id),
@@ -42,6 +46,17 @@ impl Player {
                 jail_card: false,
             }),
         }
+    }
+
+    pub fn current_position(&self) -> usize {
+        let s = self.state.borrow();
+        s.current_position
+    }
+
+    pub fn move_position(&self, steps: usize) -> usize {
+        let mut s = self.state.borrow_mut();
+        s.current_position += steps;
+        s.current_position
     }
 
     pub fn jail_card(&self) {
@@ -73,7 +88,6 @@ impl Player {
         self.state.borrow().active
     }
 
-    #[allow(dead_code)]
     pub fn current_balance(&self) -> usize {
         self.state.borrow().balance
     }
@@ -138,7 +152,7 @@ impl Player {
         }
     }
 
-    #[allow(dead_code)]
+    #[must_use]
     pub fn create_players(n_players: usize) -> Vec<Self> {
         let mut players = Vec::with_capacity(n_players);
         for identity in 1..=n_players {
@@ -152,8 +166,33 @@ impl Player {
 impl Agent for Player {
     type SimState = MonopolyState;
 
-    fn step(&self, _state: &Self::SimState) {
-        todo!()
+    fn step(&self, _state: &Self::SimState, _players: Vec<&Player>) {
+        let mut r = rand::thread_rng();
+        let mut roll_count = 0;
+
+        if self.in_jail() && self.is_active() {
+            let roll_result = roll_game_dice(&mut r);
+            self.update_jail(roll_result.is_double, JAIL_BAIL);
+            roll_count += 1;
+        }
+
+        if !self.in_jail() && self.is_active() {
+            loop {
+                let roll_result = roll_game_dice(&mut r);
+                if roll_result.is_double {
+                    roll_count += 1;
+                    if roll_count == 3 {
+                        self.go_to_jail();
+                        break;
+                    }
+                }
+                let _current_position = self.move_position(roll_result.value);
+
+                if !roll_result.is_double {
+                    break;
+                }
+            }
+        }
     }
 }
 

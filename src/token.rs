@@ -14,7 +14,7 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn value_to_enum(value: usize) -> Self {
+    pub const fn value_to_enum(value: usize) -> Self {
         match value {
             1 => Self::Iron,
             2 => Self::Terrier,

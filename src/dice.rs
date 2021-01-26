@@ -5,14 +5,14 @@ use rand::prelude::ThreadRng;
 
 pub struct RollState {
     pub value: usize,
-    pub double: bool,
+    pub is_double: bool,
 }
 
 impl Default for RollState {
     fn default() -> Self {
         RollState {
             value: 0,
-            double: true,
+            is_double: true,
         }
     }
 }
@@ -23,18 +23,17 @@ impl Add for RollState {
     fn add(self, other: Self) -> Self {
         Self {
             value: self.value + other.value,
-            double: self.value.eq(&other.value),
+            is_double: self.value.eq(&other.value),
         }
     }
 }
 
-#[allow(dead_code)]
-fn roll_game_dice(rng: &mut ThreadRng) -> RollState {
+pub fn roll_game_dice(rng: &mut ThreadRng) -> RollState {
     let distribution = Uniform::new_inclusive(1, 6);
     (0..2).fold(RollState::default(), |a, r| {
         let new = RollState {
             value: distribution.sample(rng),
-            double: true,
+            is_double: true,
         };
 
         if r == 0 {

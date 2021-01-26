@@ -1,5 +1,9 @@
+use num_enum::IntoPrimitive;
+use serde::Deserialize;
+
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Hash)]
+#[derive(Debug, Deserialize, PartialEq, Hash, IntoPrimitive, Clone, Copy)]
+#[repr(u16)]
 pub enum BoardLocation {
     Go,
     OldKentRoad,
