@@ -1,9 +1,10 @@
 mod agent;
+mod config;
 mod dice;
 mod locations;
-mod monopoly;
+pub mod monopoly;
 mod payment;
-mod player;
+pub mod player;
 mod schedule;
 mod square;
 mod state;

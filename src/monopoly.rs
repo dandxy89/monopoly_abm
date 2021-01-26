@@ -1,29 +1,38 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 
-use ring_buffer::RingBuffer;
+use crate::player::PlayerId;
+use crate::state::State;
+use crate::{config::PropertyConfig, locations::BoardLocation};
 
-use crate::{player::Player, state::State};
+pub struct Count(usize);
 
 #[allow(dead_code)]
-pub struct Monopoly {
-    players: RingBuffer<Player>,
-    free_parking: RefCell<usize>,
-    // player_position: RefCell<HashMap<PlayerId, BoardPosition>>,
+pub struct MonopolyState {
+    free_parking: RefCell<Count>,
+    player_position: RefCell<HashMap<PlayerId, BoardLocation>>,
+    cycles: RefCell<Count>,
 }
 
-impl Monopoly {
-    // #[allow(dead_code)]
-    // fn new(n_players: usize) -> Self {
-    //     Self {
-    //         players: Player::create_players(n_players),
-    //         free_parking: RefCell::new(0),
-    //         // player_position
-    //     }
-    // }
+impl MonopolyState {
+    #[allow(dead_code)]
+    pub fn new(n_players: usize, _property_config: Vec<PropertyConfig>) -> Self {
+        let mut positions = HashMap::new();
+        for p_id in 1..=n_players {
+            positions.insert(p_id, BoardLocation::Go);
+        }
+
+        Self {
+            free_parking: RefCell::new(Count(0)),
+            player_position: RefCell::new(positions),
+            cycles: RefCell::new(Count(0)),
+        }
+    }
 }
 
-impl State for Monopoly {
-    fn update(&mut self) {
-        todo!()
+impl State for MonopolyState {
+    fn update(&self) {
+        self.cycles.borrow_mut().0 += 1;
+        log::info!("Cycle [{}] complete", self.cycles.borrow().0);
     }
 }

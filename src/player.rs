@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use ring_buffer::RingBuffer;
 
-use crate::{agent::Agent, monopoly::Monopoly, token::Token};
+use crate::{agent::Agent, monopoly::MonopolyState, token::Token};
 
 pub type PlayerId = usize;
 
@@ -141,9 +141,9 @@ impl Player {
     }
 
     #[allow(dead_code)]
-    pub fn create_players(n_players: usize) -> RingBuffer<Self> {
-        let mut players = RingBuffer::with_capacity(n_players);
-        for identity in 1..=n_players {
+    pub fn create_players(n_players: &usize) -> RingBuffer<Self> {
+        let mut players = RingBuffer::with_capacity(*n_players);
+        for identity in 1..=*n_players {
             players.push(Self::new(identity));
         }
 
@@ -152,9 +152,9 @@ impl Player {
 }
 
 impl Agent for Player {
-    type SimState = Monopoly;
+    type SimState = MonopolyState;
 
-    fn step(&mut self, _state: &Self::SimState) {
+    fn step(&self, _state: &Self::SimState) {
         todo!()
     }
 }
@@ -165,7 +165,7 @@ mod test {
 
     #[test]
     fn test_create_players() {
-        let players = Player::create_players(3);
+        let players = Player::create_players(&3);
         let player_one = players.get_absolute(0).unwrap();
         let player_two = players.get_absolute(1).unwrap();
         let player_three = players.get_absolute(2).unwrap();
@@ -177,7 +177,7 @@ mod test {
 
     #[test]
     fn test_create_max() {
-        let players = Player::create_players(10);
+        let players = Player::create_players(&10);
         let last_player = players.get_absolute(9).unwrap();
 
         assert!(last_player.id == 10 && last_player.token == Token::Boot);

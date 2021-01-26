@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Hash)]
-pub enum BoardLocationName {
+pub enum BoardLocation {
     Go,
     OldKentRoad,
     WhitechapelRoad,
@@ -42,7 +42,7 @@ pub enum BoardLocationName {
     Mayfair,
 }
 
-impl Eq for BoardLocationName {}
+impl Eq for BoardLocation {}
 
 // impl BoardLocationName {
 //     #[allow(dead_code)]

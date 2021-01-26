@@ -3,7 +3,8 @@ use std::{cell::RefCell, collections::HashMap};
 
 use rand::rngs::ThreadRng;
 
-use crate::locations::BoardLocationName;
+use crate::config::PropertyConfig;
+use crate::locations::BoardLocation;
 use crate::payment::Payment;
 use crate::player::{Player, PlayerId};
 
@@ -22,18 +23,18 @@ pub struct PropertyState {
 
 impl PropertyState {
     #[allow(dead_code)]
-    pub fn new(square: &BoardLocationName) -> Self {
+    pub fn new(square: &BoardLocation) -> Self {
         match square {
-            BoardLocationName::Go
-            | BoardLocationName::IncomeTax
-            | BoardLocationName::Chance1
-            | BoardLocationName::Chance2
-            | BoardLocationName::Chance3
-            | BoardLocationName::CommunityChest1
-            | BoardLocationName::CommunityChest2
-            | BoardLocationName::Jail
-            | BoardLocationName::FreeParking
-            | BoardLocationName::GoToJail => Self {
+            BoardLocation::Go
+            | BoardLocation::IncomeTax
+            | BoardLocation::Chance1
+            | BoardLocation::Chance2
+            | BoardLocation::Chance3
+            | BoardLocation::CommunityChest1
+            | BoardLocation::CommunityChest2
+            | BoardLocation::Jail
+            | BoardLocation::FreeParking
+            | BoardLocation::GoToJail => Self {
                 ownable: false,
                 owner: None,
                 house_count: 0,
@@ -51,15 +52,10 @@ impl PropertyState {
     }
 }
 
-pub type TileCost = usize;
-pub type Rent = usize;
-pub type HouseCost = usize;
-pub type HotelCost = usize;
-
 #[allow(dead_code)]
 pub struct BoardSquare {
     position_id: BoardPosition,
-    square: BoardLocationName,
+    square: BoardLocation,
     cost: usize,
     charge: usize,
     house_cost: usize,
@@ -70,19 +66,19 @@ pub struct BoardSquare {
 impl BoardSquare {
     #[allow(dead_code)]
     pub fn new(
-        location: BoardLocationName,
-        location_config: &HashMap<BoardLocationName, (TileCost, Rent, HouseCost, HotelCost)>,
+        location: BoardLocation,
+        location_config: &HashMap<BoardLocation, PropertyConfig>,
     ) -> Self {
-        let (tile_cost, charge, house_cost, hotel_cost) = location_config.get(&location).unwrap();
+        let details = location_config.get(&location).unwrap();
 
         Self {
             position_id: 1,
             state: RefCell::new(PropertyState::new(&location)),
-            cost: *tile_cost,
+            cost: details.tile_cost,
             square: location,
-            charge: *charge,
-            house_cost: *house_cost,
-            hotel_cost: *hotel_cost,
+            charge: details.charge,
+            house_cost: details.house_cost,
+            hotel_cost: details.hotel_cost,
         }
     }
 
@@ -393,28 +389,28 @@ impl BoardSquare {
         rng: &mut ThreadRng,
     ) -> (Option<MoveTo>, Option<Payment>, FreeParking) {
         match new_position.square {
-            BoardLocationName::Go => {
+            BoardLocation::Go => {
                 player.deposit(200);
                 (None, None, 0)
             }
-            BoardLocationName::IncomeTax => {
+            BoardLocation::IncomeTax => {
                 player.pay(200); // OR 10% of the value of the Assets
                 (None, None, 0)
             }
-            BoardLocationName::LuxuryTax => {
+            BoardLocation::LuxuryTax => {
                 player.pay(75);
                 (None, None, 0)
             }
-            BoardLocationName::Chance1 => self.chance_space(player, rng),
-            BoardLocationName::Chance2 => self.chance_space(player, rng),
-            BoardLocationName::Chance3 => self.chance_space(player, rng),
-            BoardLocationName::CommunityChest1 => self.community_chest_space(player, rng),
-            BoardLocationName::CommunityChest2 => self.community_chest_space(player, rng),
-            BoardLocationName::GoToJail => {
+            BoardLocation::Chance1 => self.chance_space(player, rng),
+            BoardLocation::Chance2 => self.chance_space(player, rng),
+            BoardLocation::Chance3 => self.chance_space(player, rng),
+            BoardLocation::CommunityChest1 => self.community_chest_space(player, rng),
+            BoardLocation::CommunityChest2 => self.community_chest_space(player, rng),
+            BoardLocation::GoToJail => {
                 player.go_to_jail();
                 (Some(9), None, 0)
             }
-            BoardLocationName::Jail => (None, None, 0), // Just Visiting
+            BoardLocation::Jail => (None, None, 0), // Just Visiting
             _ => {
                 // Not bought
                 if self.is_ownable() && player.can_afford(self.get_purchase_cost()) {
@@ -459,34 +455,40 @@ impl BoardSquare {
 mod test {
     use std::collections::HashMap;
 
-    use crate::player::Player;
+    use crate::{config::PropertyConfig, player::Player};
 
-    use super::{BoardLocationName, BoardSquare};
+    use super::{BoardLocation, BoardSquare};
 
     #[test]
     fn test_property_is_ownable() {
         let mut config = HashMap::new();
-        config.insert(BoardLocationName::Piccadilly, (300, 50, 100, 200));
+        config.insert(
+            BoardLocation::Piccadilly,
+            PropertyConfig::new(300, 50, 100, 200),
+        );
 
-        let sq = BoardSquare::new(BoardLocationName::Piccadilly, &config);
+        let sq = BoardSquare::new(BoardLocation::Piccadilly, &config);
         assert!(sq.is_ownable());
     }
 
     #[test]
     fn test_property_is_not_ownable() {
         let mut config = HashMap::new();
-        config.insert(BoardLocationName::Go, (0, 0, 0, 0));
+        config.insert(BoardLocation::Go, PropertyConfig::new(0, 0, 0, 0));
 
-        let sq = BoardSquare::new(BoardLocationName::Go, &config);
+        let sq = BoardSquare::new(BoardLocation::Go, &config);
         assert!(!sq.is_ownable());
     }
 
     #[test]
     fn test_get_cost() {
         let mut config = HashMap::new();
-        config.insert(BoardLocationName::Piccadilly, (300, 50, 100, 200));
+        config.insert(
+            BoardLocation::Piccadilly,
+            PropertyConfig::new(300, 50, 100, 200),
+        );
 
-        let sq = BoardSquare::new(BoardLocationName::Piccadilly, &config);
+        let sq = BoardSquare::new(BoardLocation::Piccadilly, &config);
         let player_one = Player::new(1);
 
         sq.purchase_property(&player_one);
